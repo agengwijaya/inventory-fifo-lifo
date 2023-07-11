@@ -168,7 +168,7 @@ class TransaksiKeluarFifoController extends Controller
         $sisa = $request->qty;
         $text = '';
         while ($sisa > 0) {
-            $value_stok = Stok::where('jenis', 1)->where('barang_id', $request->barang_id)->where('stok_akhir', '!=', 0)->orderBy('tanggal_transaksi', 'asc')->orderBy('id', 'asc')->first();
+            $value_stok = Stok::where('jenis', 1)->where('barang_id', $request->barang_id)->where('stok_akhir', '!=', 0)->where('soft_delete', 0)->orderBy('tanggal_transaksi', 'asc')->orderBy('id', 'asc')->first();
             $text .= $value_stok->stok_akhir . ',';
             $data_stok = [
                 'tanggal_transaksi' => $request->tanggal_transaksi,

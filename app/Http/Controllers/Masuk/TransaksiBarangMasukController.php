@@ -227,12 +227,33 @@ class TransaksiBarangMasukController extends Controller
     public function update(Request $request, $id)
     {
         try {
+            $pembelian_detail = TransaksiPembelianDetail::where('id', $id)->first();
+
+            $get_barang = Barang::where('id', $pembelian_detail->barang_id)->first();
+            Barang::where('id', $request->barang_id)->update(['stok' => $get_barang->stok - $pembelian_detail->qty, 'updated_by' => auth()->user()->id]);
+
             $data_detail = [
                 "barang_id" => $request->barang_id,
                 "harga" => replace_nominal($request->harga),
                 "qty" => $request->qty,
             ];
             TransaksiPembelianDetail::where('id', $id)->update($data_detail);
+
+            $data_stok = [
+                'barang_id' => $request->barang_id,
+                'stok_awal' => 0,
+                'masuk' => $request->qty,
+                'harga_masuk' => replace_nominal($request->harga),
+                'keluar' => 0,
+                'harga_keluar' => replace_nominal($request->harga),
+                'stok_akhir' => $request->qty,
+                'updated_by' => auth()->user()->id
+            ];
+
+            Stok::where('jenis', 1)->where('transaksi_detail_id', $id)->update($data_stok);
+
+            $get_barang = Barang::where('id', $request->barang_id)->first();
+            Barang::where('id', $request->barang_id)->update(['stok' => $get_barang->stok + $request->qty, 'updated_by' => auth()->user()->id]);
             return back();
         } catch (\Throwable $th) {
             return back()->with('error', 'Maaf, ada kesalahan data. Silahkan coba kembali!');
@@ -242,11 +263,14 @@ class TransaksiBarangMasukController extends Controller
     public function hapus(Request $request)
     {
         try {
+            $detail = TransaksiPembelianDetail::where('id', $request->id)->first();
             if (!empty($request->jenis)) {
-                TransaksiPembelian::where('id', $request->id)->update(['soft_delete' => 1]);
-                TransaksiPembelianDetail::where('transaksi_pembelian_id', $request->id)->update(['soft_delete' => 1]);
+                TransaksiPembelian::where('id', $detail->transaksi_masuk_id)->update(['soft_delete' => 1]);
+                TransaksiPembelianDetail::where('transaksi_masuk_id', $detail->transaksi_masuk_id)->update(['soft_delete' => 1]);
+                Stok::where('jenis', 1)->where('transaksi_id', $detail->transaksi_masuk_id)->update(['soft_delete' => 1]);
             } else {
                 TransaksiPembelianDetail::where('id', $request->id)->update(['soft_delete' => 1]);
+                Stok::where('jenis', 1)->where('transaksi_detail_id', $request->id)->update(['soft_delete' => 1]);
             }
             return back();
         } catch (\Throwable $th) {
